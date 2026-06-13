@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>source-sink-streamlines</title>
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=zodiak@500,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem;
+      --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
+      --color-bg: #f7f6f2;
+      --color-surface: #f9f8f5;
+      --color-surface-2: #fbfbf9;
+      --color-surface-offset: #edeae5;
+      --color-border: #d4d1ca;
+      --color-divider: #dcd9d5;
+      --color-text: #28251d;
+      --color-text-muted: #6f6d67;
+      --color-text-faint: #9d9a93;
+      --color-primary: #01696f;
+      --color-primary-hover: #0c4e54;
+      --color-primary-highlight: #cedcd8;
+      --color-success: #437a22;
+      --color-error: #a12c7b;
+      --color-blue: #006494;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+      --shadow-sm: 0 1px 2px oklch(0.2 0.01 80 / 0.06);
+      --shadow-md: 0 4px 12px oklch(0.2 0.01 80 / 0.08);
+      --transition-interactive: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --font-display: 'Zodiak', Georgia, serif;
+      --font-body: 'Satoshi', 'Inter', sans-serif;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: #1c1b19;
+      --color-surface-2: #201f1d;
+      --color-surface-offset: #22211f;
+      --color-border: #393836;
+      --color-divider: #2a2927;
+      --color-text: #cdccca;
+      --color-text-muted: #9c9a96;
+      --color-text-faint: #6d6b67;
+      --color-primary: #4f98a3;
+      --color-primary-hover: #227f8b;
+      --color-primary-highlight: #313b3b;
+      --color-success: #7fb15d;
+      --color-error: #d163a7;
+      --color-blue: #6ca8d4;
+      --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+      --shadow-md: 0 4px 12px oklch(0 0 0 / 0.3);
+    }
+    *,:before,:after{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-text-size-adjust:none;text-size-adjust:none;scroll-behavior:smooth}
+    body{min-height:100dvh;font-family:var(--font-body);font-size:var(--text-base);line-height:1.55;color:var(--color-text);background:var(--color-bg)}
+    button,input,select{font:inherit;color:inherit}
+    button{cursor:pointer;border:none;background:none}
+    canvas,svg{display:block;max-width:100%}
+    a,button,input,select{transition:color var(--transition-interactive),background var(--transition-interactive),border-color var(--transition-interactive),box-shadow var(--transition-interactive),transform var(--transition-interactive)}
+    :focus-visible{outline:2px solid var(--color-primary);outline-offset:3px;border-radius:var(--radius-sm)}
+    .app{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);height:100dvh}
+    .panel{background:linear-gradient(180deg,var(--color-surface),var(--color-surface-2));border-right:1px solid var(--color-divider);overflow:auto;padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)}
+    .viewer{min-width:0;display:flex;flex-direction:column;padding:var(--space-4);gap:var(--space-4)}
+    .viewport-card{flex:1;min-height:0;background:var(--color-surface);border:1px solid color-mix(in oklab,var(--color-text) 10%, transparent);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:var(--space-3);display:flex;flex-direction:column}
+    .canvas-wrap{position:relative;flex:1;min-height:420px;border-radius:calc(var(--radius-xl) - var(--space-3));overflow:hidden;background:radial-gradient(circle at 50% 50%, color-mix(in oklab,var(--color-primary) 7%, var(--color-surface-2)) 0%, var(--color-surface-offset) 100%)}
+    #field{width:100%;height:100%;touch-action:none}
+    .header{display:flex;justify-content:space-between;gap:var(--space-4);align-items:flex-start}
+    .brand{display:flex;gap:var(--space-3);align-items:center}
+    .logo{width:2.5rem;height:2.5rem;border-radius:0.8rem;background:linear-gradient(135deg,var(--color-primary),color-mix(in oklab,var(--color-primary) 45%, var(--color-success)));display:grid;place-items:center;color:white;box-shadow:var(--shadow-sm)}
+    .logo svg{width:1.5rem;height:1.5rem}
+    h1{font-family:var(--font-display);font-size:var(--text-xl);line-height:1.05;letter-spacing:-0.03em}
+    h2{font-size:var(--text-lg);line-height:1.15}
+    .muted{color:var(--color-text-muted)}
+    .tiny{font-size:var(--text-xs);color:var(--color-text-faint)}
+    .toolbar,.card,.entity,.preset-card{background:var(--color-surface-2);border:1px solid color-mix(in oklab,var(--color-text) 10%, transparent);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+    .toolbar{padding:var(--space-3) var(--space-4);display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+    .card{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4)}
+    .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
+    .btn-row{display:flex;gap:var(--space-3);flex-wrap:wrap}
+    .btn{min-height:44px;padding:0.72rem 1rem;border-radius:var(--radius-full);border:1px solid transparent;font-size:var(--text-sm);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:0.55rem}
+    .btn-primary{background:var(--color-primary);color:white}.btn-primary:hover{background:var(--color-primary-hover)}
+    .btn-secondary{background:var(--color-primary-highlight);color:var(--color-primary);border-color:color-mix(in oklab,var(--color-primary) 18%, transparent)}
+    .btn-ghost{background:transparent;border-color:color-mix(in oklab,var(--color-text) 14%, transparent)}
+    .btn.active{box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--color-primary) 45%, transparent)}
+    label{display:flex;flex-direction:column;gap:var(--space-2);font-size:var(--text-sm);font-weight:700}
+    input[type="range"],input[type="number"]{width:100%}
+    input[type="number"],select{min-height:44px;padding:0.75rem 0.8rem;background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md)}
+    .entity-list,.preset-list{display:flex;flex-direction:column;gap:var(--space-3)}
+    .entity{padding:var(--space-4);display:grid;grid-template-columns:auto 1fr auto;gap:var(--space-3);align-items:start}
+    .badge{padding:0.3rem 0.65rem;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:700;letter-spacing:0.04em;text-transform:uppercase}
+    .badge.source{background:color-mix(in oklab,var(--color-success) 18%, transparent);color:var(--color-success)}
+    .badge.sink{background:color-mix(in oklab,var(--color-error) 18%, transparent);color:var(--color-error)}
+    .badge.flow{background:color-mix(in oklab,var(--color-blue) 18%, transparent);color:var(--color-blue)}
+    .entity-main{display:flex;flex-direction:column;gap:var(--space-2)}
+    .entity-actions{display:flex;flex-direction:column;gap:var(--space-2)}
+    .pill{padding:0.4rem 0.6rem;border-radius:var(--radius-full);background:var(--color-bg);border:1px solid var(--color-border);font-size:var(--text-xs)}
+    .stats{display:flex;gap:var(--space-3);flex-wrap:wrap}
+    .stat{background:var(--color-surface-2);border:1px solid color-mix(in oklab,var(--color-text) 10%, transparent);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);min-width:140px}
+    .stat strong{display:block;font-size:var(--text-lg)}
+    .hint-list{display:flex;flex-direction:column;gap:var(--space-2);padding-left:1.1rem}
+    .hint-list li{max-width:48ch}
+    .viewer-header{display:flex;justify-content:space-between;gap:var(--space-4);align-items:center}
+    .theme-toggle{min-width:44px;min-height:44px;border-radius:var(--radius-full);border:1px solid color-mix(in oklab,var(--color-text) 12%, transparent);background:var(--color-surface-2);display:grid;place-items:center}
+    .legend{display:flex;gap:var(--space-4);flex-wrap:wrap}
+    .legend-item{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-sm)}
+    .swatch{width:1rem;height:0.35rem;border-radius:var(--radius-full)}
+    .sw-source{background:var(--color-success)} .sw-sink{background:var(--color-error)} .sw-line{background:var(--color-primary)} .sw-flow{background:var(--color-blue)}
+    .preset-card{padding:var(--space-4);text-align:left;display:flex;flex-direction:column;gap:var(--space-3)}
+    .preset-card:hover{transform:translateY(-1px);border-color:color-mix(in oklab,var(--color-primary) 30%, transparent)}
+    .preset-card.active{box-shadow:inset 0 0 0 2px color-mix(in oklab,var(--color-primary) 45%, transparent)}
+    .preset-top{display:flex;justify-content:space-between;gap:var(--space-3);align-items:flex-start}
+    .preset-title{font-weight:700}
+    .preset-desc{font-size:var(--text-sm);color:var(--color-text-muted)}
+    .preset-tags{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+    .preset-preview{height:70px;border-radius:var(--radius-md);background:linear-gradient(180deg,color-mix(in oklab,var(--color-primary) 8%, var(--color-surface)), color-mix(in oklab,var(--color-surface-offset) 70%, transparent));position:relative;overflow:hidden}
+    .preset-preview svg{width:100%;height:100%}
+    @media (max-width: 920px){
+      .app{grid-template-columns:1fr;grid-template-rows:auto minmax(50dvh,1fr);height:auto;min-height:100dvh}
+      .panel{max-height:none;border-right:none;border-bottom:1px solid var(--color-divider)}
+      .viewer{padding:var(--space-3)}
+      .canvas-wrap{min-height:52dvh}
+    }
+    @media (prefers-reduced-motion: reduce){*{transition-duration:0.01ms!important;animation-duration:0.01ms!important}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <div class="header">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M4 12h16"></path>
+              <path d="M12 4c-2.8 2.2-4 4.8-4 8s1.2 5.8 4 8"></path>
+              <path d="M12 4c2.8 2.2 4 4.8 4 8s-1.2 5.8-4 8"></path>
+            </svg>
+          </div>
+          <div>
+            <h1>Source–sink streamlines</h1>
+            <p class="muted">Interactive potential-flow map with draggable singularities, uniform flow, and preset constructions.</p>
+          </div>
+        </div>
+        <button class="theme-toggle" data-theme-toggle aria-label="Switch theme"></button>
+      </div>
+
+      <section class="card">
+        <div class="viewer-header">
+          <h2>Preset flows</h2>
+          <span class="pill" id="presetPill">5 presets</span>
+        </div>
+        <div id="presetList" class="preset-list"></div>
+        <p class="tiny">Pick a preset to load its source-sink construction. You can still drag elements, edit strengths, and switch views afterward.</p>
+      </section>
+
+      <section class="card">
+        <h2>Controls</h2>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="addSource">Add source</button>
+          <button class="btn btn-secondary" id="addSink">Add sink</button>
+          <button class="btn btn-ghost" id="addFlow">Add uniform flow</button>
+          <button class="btn btn-ghost" id="clearAll">Clear</button>
+        </div>
+        <div class="grid2">
+          <label>Seed density
+            <input id="seedDensity" type="range" min="6" max="28" step="1" value="14">
+          </label>
+          <label>Step size
+            <input id="stepSize" type="range" min="2" max="14" step="1" value="6">
+          </label>
+          <label>Max trace length
+            <input id="maxSteps" type="range" min="120" max="1200" step="20" value="520">
+          </label>
+          <label>Strength scale
+            <input id="strengthScale" type="range" min="20" max="240" step="5" value="90">
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost active" id="modeStream">Streamlines</button>
+          <button class="btn btn-ghost" id="modeVectors">Vectors</button>
+          <button class="btn btn-ghost active" id="showMarkers">Markers</button>
+        </div>
+        <p class="tiny">Double-click the graph to add a source, or Alt/Option + double-click to add a sink. Uniform-flow elements add a constant background velocity and appear as blue arrows.</p>
+      </section>
+
+      <section class="card">
+        <h2>Selected element</h2>
+        <div id="selectedEditor" class="muted">No source, sink, or uniform flow selected yet.</div>
+      </section>
+
+      <section class="card">
+        <div class="viewer-header">
+          <h2>Flow elements</h2>
+          <span class="pill" id="countPill">0 elements</span>
+        </div>
+        <div id="entityList" class="entity-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>How it works</h2>
+        <ul class="hint-list">
+          <li>Sources push streamlines outward, sinks pull them inward, and uniform flow adds the same velocity everywhere.</li>
+          <li>The presets combine these pieces to reproduce classic potential-flow shapes such as a cylinder, Rankine body, and Joukowski-style airfoil field.</li>
+          <li>After loading a preset, you can still move elements and retune strengths exactly as before.</li>
+        </ul>
+      </section>
+    </aside>
+
+    <main class="viewer">
+      <div class="toolbar">
+        <div>
+          <div class="legend">
+            <div class="legend-item"><span class="swatch sw-source"></span><span>Source</span></div>
+            <div class="legend-item"><span class="swatch sw-sink"></span><span>Sink</span></div>
+            <div class="legend-item"><span class="swatch sw-flow"></span><span>Uniform flow</span></div>
+            <div class="legend-item"><span class="swatch sw-line"></span><span>Streamline / vector</span></div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="tiny">Selected</span><strong id="selectedName">None</strong></div>
+          <div class="stat"><span class="tiny">Cursor</span><strong id="cursorReadout">(0.00, 0.00)</strong></div>
+          <div class="stat"><span class="tiny">Canvas</span><strong id="canvasReadout">0 × 0</strong></div>
+        </div>
+      </div>
+      <section class="viewport-card" aria-label="Potential flow workspace">
+        <div class="canvas-wrap">
+          <canvas id="field"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const themeToggle = document.querySelector('[data-theme-toggle]');
+      const root = document.documentElement;
+      let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const applyTheme = () => {
+        root.setAttribute('data-theme', theme);
+        themeToggle.innerHTML = theme === 'dark'
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+      };
+      themeToggle.addEventListener('click', () => { theme = theme === 'dark' ? 'light' : 'dark'; applyTheme(); render(); renderPresetList(); });
+      applyTheme();
+
+      const canvas = document.getElementById('field');
+      const ctx = canvas.getContext('2d');
+      const addSourceBtn = document.getElementById('addSource');
+      const addSinkBtn = document.getElementById('addSink');
+      const addFlowBtn = document.getElementById('addFlow');
+      const clearAllBtn = document.getElementById('clearAll');
+      const entityList = document.getElementById('entityList');
+      const presetList = document.getElementById('presetList');
+      const selectedEditor = document.getElementById('selectedEditor');
+      const selectedName = document.getElementById('selectedName');
+      const countPill = document.getElementById('countPill');
+      const cursorReadout = document.getElementById('cursorReadout');
+      const canvasReadout = document.getElementById('canvasReadout');
+      const seedDensityInput = document.getElementById('seedDensity');
+      const stepSizeInput = document.getElementById('stepSize');
+      const maxStepsInput = document.getElementById('maxSteps');
+      const strengthScaleInput = document.getElementById('strengthScale');
+      const modeStreamBtn = document.getElementById('modeStream');
+      const modeVectorsBtn = document.getElementById('modeVectors');
+      const showMarkersBtn = document.getElementById('showMarkers');
+
+      const PRESETS = [
+        {
+          id: 'cylinder',
+          title: 'Cylinder',
+          desc: 'Uniform flow plus a centered doublet creates the classical cylinder pattern.',
+          tags: ['uniform flow', 'doublet'],
+          config: [
+            { type: 'source', x: 0.5, y: 0.5, strength: 1.35 },
+            { type: 'sink', x: 0.502, y: 0.5, strength: 1.35 },
+            { type: 'flow', x: 0.16, y: 0.5, strength: 1.25, angle: 0 }
+          ],
+          preview: 'cylinder'
+        },
+        {
+          id: 'rankine-half',
+          title: 'Rankine half body',
+          desc: 'A single source in uniform flow opens into the half-body dividing streamline.',
+          tags: ['uniform flow', 'single source'],
+          config: [
+            { type: 'source', x: 0.37, y: 0.5, strength: 1.55 },
+            { type: 'flow', x: 0.16, y: 0.5, strength: 1.05, angle: 0 }
+          ],
+          preview: 'half'
+        },
+        {
+          id: 'rankine-oval',
+          title: 'Rankine oval',
+          desc: 'A source-sink pair embedded in uniform flow produces a closed oval body.',
+          tags: ['uniform flow', 'source-sink pair'],
+          config: [
+            { type: 'source', x: 0.38, y: 0.5, strength: 1.55 },
+            { type: 'sink', x: 0.62, y: 0.5, strength: 1.55 },
+            { type: 'flow', x: 0.16, y: 0.5, strength: 1.15, angle: 0 }
+          ],
+          preview: 'oval'
+        },
+        {
+          id: 'airfoil',
+          title: 'Joukowski airfoil',
+          desc: 'A displaced source-sink doublet with angled uniform flow approximates a cambered airfoil field.',
+          tags: ['doublet', 'angle of attack'],
+          config: [
+            { type: 'source', x: 0.49, y: 0.47, strength: 1.45 },
+            { type: 'sink', x: 0.515, y: 0.5, strength: 1.45 },
+            { type: 'flow', x: 0.15, y: 0.55, strength: 1.2, angle: -0.22 }
+          ],
+          preview: 'airfoil'
+        },
+        {
+          id: 'corner',
+          title: 'Corner flow',
+          desc: 'Two balancing source-sink pairs plus diagonal uniform flow create a wedge-like corner pattern.',
+          tags: ['angled flow', 'wedge'],
+          config: [
+            { type: 'source', x: 0.33, y: 0.67, strength: 1.2 },
+            { type: 'sink', x: 0.67, y: 0.33, strength: 1.2 },
+            { type: 'source', x: 0.42, y: 0.42, strength: 0.7 },
+            { type: 'sink', x: 0.58, y: 0.58, strength: 0.7 },
+            { type: 'flow', x: 0.18, y: 0.82, strength: 1.0, angle: -0.78 }
+          ],
+          preview: 'corner'
+        }
+      ];
+
+      let entities = [];
+      let selectedId = null;
+      let draggingId = null;
+      let showMarkers = true;
+      let viewMode = 'stream';
+      let activePresetId = 'rankine-oval';
+      let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      let raf = null;
+
+      const colors = () => getComputedStyle(document.documentElement);
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const fmt = n => Number(n).toFixed(2);
+      const getEntity = id => entities.find(e => e.id === id);
+      const getPointer = evt => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (evt.clientX - rect.left) / rect.width;
+        const y = (evt.clientY - rect.top) / rect.height;
+        return { x: clamp(x, 0, 1), y: clamp(y, 0, 1) };
+      };
+      const worldToCanvas = p => ({ x: p.x * canvas.width / dpr, y: p.y * canvas.height / dpr });
+
+      function newEntity(def) {
+        return { id: crypto.randomUUID(), angle: 0, ...def };
+      }
+
+      function loadPreset(id) {
+        const preset = PRESETS.find(p => p.id === id);
+        if (!preset) return;
+        activePresetId = id;
+        entities = preset.config.map(item => newEntity(item));
+        selectedId = entities[0]?.id || null;
+        syncEditor();
+        renderPresetList();
+        queueRender();
+      }
+
+      function velocityAt(x, y) {
+        let vx = 0;
+        let vy = 0;
+        const scale = Number(strengthScaleInput.value);
+        for (const e of entities) {
+          if (e.type === 'flow') {
+            vx += Math.cos(e.angle || 0) * e.strength * scale * 0.085;
+            vy += Math.sin(e.angle || 0) * e.strength * scale * 0.085;
+            continue;
+          }
+          const dx = x - e.x;
+          const dy = y - e.y;
+          const r2 = dx * dx + dy * dy + 0.00028;
+          const k = (e.type === 'source' ? 1 : -1) * e.strength * scale / (2 * Math.PI * r2);
+          vx += k * dx;
+          vy += k * dy;
+        }
+        return { vx, vy };
+      }
+
+      function nearEntity(x, y) {
+        return entities.some(e => {
+          if (e.type === 'flow') return false;
+          const dx = x - e.x, dy = y - e.y;
+          return dx * dx + dy * dy < 0.0012;
+        });
+      }
+
+      function trace(seed, dir = 1) {
+        const pts = [];
+        let x = seed.x;
+        let y = seed.y;
+        const baseStep = Number(stepSizeInput.value) / Math.max(canvas.width / dpr, canvas.height / dpr);
+        const maxSteps = Number(maxStepsInput.value);
+        for (let i = 0; i < maxSteps; i++) {
+          const { vx, vy } = velocityAt(x, y);
+          const mag = Math.hypot(vx, vy);
+          if (!isFinite(mag) || mag < 1e-6) break;
+          pts.push({ x, y });
+          const step = baseStep / (1 + 0.02 * Math.sqrt(mag));
+          x += dir * step * vx / mag;
+          y += dir * step * vy / mag;
+          if (x < -0.05 || x > 1.05 || y < -0.05 || y > 1.05) break;
+          if (nearEntity(x, y) && pts.length > 12) break;
+        }
+        return pts;
+      }
+
+      function generateSeeds() {
+        const density = Number(seedDensityInput.value);
+        const seeds = [];
+        for (const e of entities) {
+          if (e.type === 'flow') continue;
+          const ring = 0.045;
+          const count = density + Math.round(Math.abs(e.strength) * 4);
+          for (let i = 0; i < count; i++) {
+            const a = (i / count) * Math.PI * 2;
+            seeds.push({ x: e.x + ring * Math.cos(a), y: e.y + ring * Math.sin(a), source: e.id });
+          }
+        }
+        const flows = entities.filter(e => e.type === 'flow');
+        const flowAngle = flows.length ? flows[0].angle || 0 : 0;
+        for (let i = 1; i < density; i++) {
+          const t = i / density;
+          seeds.push({ x: t, y: 0.02 });
+          seeds.push({ x: t, y: 0.98 });
+          seeds.push({ x: 0.02, y: t });
+          seeds.push({ x: 0.98, y: t });
+        }
+        if (flows.length) {
+          for (let i = 0; i < density; i++) {
+            const t = (i + 0.5) / density;
+            seeds.push({ x: 0.06, y: clamp(0.5 + (t - 0.5) * 0.8 + 0.08 * Math.sin(flowAngle), 0.03, 0.97) });
+          }
+        }
+        return seeds.filter(s => s.x >= 0 && s.x <= 1 && s.y >= 0 && s.y <= 1 && !nearEntity(s.x, s.y));
+      }
+
+      function drawField() {
+        const style = colors();
+        const w = canvas.width / dpr;
+        const h = canvas.height / dpr;
+        ctx.clearRect(0, 0, w, h);
+
+        const bgGrid = colorMix(style.getPropertyValue('--color-text').trim(), 0.08);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = bgGrid;
+        ctx.beginPath();
+        const spacing = Math.max(48, Math.min(w, h) / 10);
+        for (let x = spacing; x < w; x += spacing) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+        for (let y = spacing; y < h; y += spacing) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+        ctx.stroke();
+
+        if (viewMode === 'stream') {
+          const seeds = generateSeeds();
+          ctx.lineCap = 'round';
+          ctx.lineWidth = 1.35;
+          ctx.strokeStyle = style.getPropertyValue('--color-primary').trim();
+          for (const seed of seeds) {
+            const forward = trace(seed, 1);
+            const backward = trace(seed, -1);
+            const pts = backward.reverse().concat(forward);
+            if (pts.length < 2) continue;
+            ctx.beginPath();
+            const p0 = worldToCanvas(pts[0]);
+            ctx.moveTo(p0.x, p0.y);
+            for (let i = 1; i < pts.length; i++) {
+              const p = worldToCanvas(pts[i]);
+              ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+          }
+        } else {
+          ctx.strokeStyle = style.getPropertyValue('--color-primary').trim();
+          ctx.fillStyle = style.getPropertyValue('--color-primary').trim();
+          const cols = 18, rows = 12;
+          for (let i = 1; i < cols; i++) {
+            for (let j = 1; j < rows; j++) {
+              const x = i / cols, y = j / rows;
+              if (nearEntity(x, y)) continue;
+              const { vx, vy } = velocityAt(x, y);
+              const mag = Math.hypot(vx, vy);
+              if (mag < 1e-8) continue;
+              const len = 0.03;
+              const dx = len * vx / mag;
+              const dy = len * vy / mag;
+              const p1 = worldToCanvas({ x, y });
+              const p2 = worldToCanvas({ x: x + dx, y: y + dy });
+              ctx.lineWidth = 1.1;
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+              const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+              const head = 7;
+              ctx.beginPath();
+              ctx.moveTo(p2.x, p2.y);
+              ctx.lineTo(p2.x - head * Math.cos(ang - Math.PI / 6), p2.y - head * Math.sin(ang - Math.PI / 6));
+              ctx.lineTo(p2.x - head * Math.cos(ang + Math.PI / 6), p2.y - head * Math.sin(ang + Math.PI / 6));
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+        }
+
+        if (showMarkers) {
+          for (const e of entities) drawEntity(e, e.id === selectedId);
+        }
+      }
+
+      function drawEntity(e, selected) {
+        const style = colors();
+        if (e.type === 'flow') {
+          const p = worldToCanvas(e);
+          const len = 56;
+          const dx = Math.cos(e.angle || 0) * len;
+          const dy = Math.sin(e.angle || 0) * len;
+          ctx.save();
+          ctx.strokeStyle = style.getPropertyValue('--color-blue').trim();
+          ctx.fillStyle = style.getPropertyValue('--color-blue').trim();
+          ctx.lineWidth = selected ? 3.2 : 2.3;
+          ctx.beginPath();
+          ctx.moveTo(p.x - dx * 0.5, p.y - dy * 0.5);
+          ctx.lineTo(p.x + dx * 0.5, p.y + dy * 0.5);
+          ctx.stroke();
+          const tipX = p.x + dx * 0.5;
+          const tipY = p.y + dy * 0.5;
+          const ang = Math.atan2(dy, dx);
+          const head = 10;
+          ctx.beginPath();
+          ctx.moveTo(tipX, tipY);
+          ctx.lineTo(tipX - head * Math.cos(ang - Math.PI / 6), tipY - head * Math.sin(ang - Math.PI / 6));
+          ctx.lineTo(tipX - head * Math.cos(ang + Math.PI / 6), tipY - head * Math.sin(ang + Math.PI / 6));
+          ctx.closePath();
+          ctx.fill();
+          if (selected) {
+            ctx.strokeStyle = style.getPropertyValue('--color-primary').trim();
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+          return;
+        }
+        const p = worldToCanvas(e);
+        const r = 15 + 4 * Math.abs(e.strength);
+        const fill = e.type === 'source' ? style.getPropertyValue('--color-success').trim() : style.getPropertyValue('--color-error').trim();
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.16)';
+        ctx.shadowBlur = selected ? 18 : 10;
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = selected ? 3 : 1.5;
+        ctx.strokeStyle = selected ? style.getPropertyValue('--color-primary').trim() : 'rgba(255,255,255,0.85)';
+        ctx.stroke();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(p.x - 6, p.y);
+        ctx.lineTo(p.x + 6, p.y);
+        if (e.type === 'source') {
+          ctx.moveTo(p.x, p.y - 6);
+          ctx.lineTo(p.x, p.y + 6);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function colorMix(rgbLike, alpha) {
+        if (rgbLike.startsWith('#')) {
+          const hex = rgbLike.slice(1);
+          const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+          const n = parseInt(full, 16);
+          const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+          return `rgba(${r},${g},${b},${alpha})`;
+        }
+        return rgbLike;
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvasReadout.textContent = `${Math.round(rect.width)} × ${Math.round(rect.height)}`;
+        queueRender();
+      }
+
+      function queueRender() {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = null;
+          render();
+        });
+      }
+
+      function renderPresetList() {
+        presetList.innerHTML = '';
+        for (const preset of PRESETS) {
+          const btn = document.createElement('button');
+          btn.className = `preset-card${preset.id === activePresetId ? ' active' : ''}`;
+          btn.type = 'button';
+          btn.innerHTML = `
+            <div class="preset-top">
+              <div>
+                <div class="preset-title">${preset.title}</div>
+                <div class="preset-desc">${preset.desc}</div>
+              </div>
+              <span class="pill">Load</span>
+            </div>
+            <div class="preset-preview">${presetPreviewSVG(preset.preview)}</div>
+            <div class="preset-tags">${preset.tags.map(tag => `<span class="pill">${tag}</span>`).join('')}</div>
+          `;
+          btn.addEventListener('click', () => loadPreset(preset.id));
+          presetList.appendChild(btn);
+        }
+      }
+
+      function presetPreviewSVG(kind) {
+        const stroke = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#01696f';
+        const source = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#437a22';
+        const sink = getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || '#a12c7b';
+        const flow = getComputedStyle(document.documentElement).getPropertyValue('--color-blue').trim() || '#006494';
+        const paths = {
+          cylinder: '<path d="M8 35 C24 18, 36 18, 54 35 S84 52, 108 35 S144 18, 162 35"/><path d="M8 23 C26 10, 40 12, 58 24 S86 42, 110 24 S144 10, 162 23"/><circle cx="83" cy="35" r="10" fill="none"/>',
+          half: '<path d="M8 35 C34 35, 44 18, 68 18 C88 18, 110 28, 162 28"/><path d="M8 45 C30 45, 44 54, 72 54 C96 54, 116 48, 162 44"/>',
+          oval: '<path d="M8 35 C34 18, 46 18, 74 35 C100 52, 114 52, 162 35"/><path d="M8 22 C40 10, 58 10, 84 22 C110 34, 128 34, 162 22"/>',
+          airfoil: '<path d="M8 37 C34 20, 56 18, 88 28 C114 36, 136 36, 162 26"/><path d="M8 49 C40 46, 66 44, 92 40 C118 36, 136 34, 162 34"/>',
+          corner: '<path d="M18 56 C32 42, 42 32, 56 18"/><path d="M30 58 C48 42, 60 34, 76 16"/><path d="M44 58 C66 42, 82 32, 104 14"/>'
+        };
+        const markers = {
+          cylinder: `<circle cx="81" cy="35" r="5" fill="${source}"/><circle cx="87" cy="35" r="5" fill="${sink}"/><path d="M18 14 H54" stroke="${flow}"/>`,
+          half: `<circle cx="46" cy="36" r="6" fill="${source}"/><path d="M18 18 H56" stroke="${flow}"/>`,
+          oval: `<circle cx="52" cy="35" r="5" fill="${source}"/><circle cx="114" cy="35" r="5" fill="${sink}"/><path d="M18 14 H54" stroke="${flow}"/>`,
+          airfoil: `<circle cx="80" cy="30" r="5" fill="${source}"/><circle cx="88" cy="36" r="5" fill="${sink}"/><path d="M16 48 L48 40" stroke="${flow}"/>`,
+          corner: `<circle cx="44" cy="48" r="4.5" fill="${source}"/><circle cx="118" cy="24" r="4.5" fill="${sink}"/><path d="M18 52 L42 30" stroke="${flow}"/>`
+        };
+        return `<svg viewBox="0 0 170 70" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke="${stroke}" stroke-width="2" stroke-linecap="round">${paths[kind] || ''}</g>${markers[kind] || ''}</svg>`;
+      }
+
+      function renderEntityList() {
+        countPill.textContent = `${entities.length} element${entities.length === 1 ? '' : 's'}`;
+        entityList.innerHTML = '';
+        entities.forEach((e, idx) => {
+          const el = document.createElement('button');
+          el.className = 'entity';
+          el.type = 'button';
+          const label = e.type === 'flow' ? 'Uniform flow' : (e.type === 'source' ? 'Source' : 'Sink');
+          const detail = e.type === 'flow'
+            ? `angle ${fmt((e.angle || 0) * 180 / Math.PI)}°, strength ${fmt(e.strength)}`
+            : `x ${fmt(e.x)}, y ${fmt(e.y)}, strength ${fmt(e.strength)}`;
+          el.setAttribute('aria-label', `Select ${label} ${idx + 1}`);
+          el.innerHTML = `
+            <span class="badge ${e.type}">${e.type === 'flow' ? 'flow' : e.type}</span>
+            <div class="entity-main">
+              <strong>${label} ${idx + 1}</strong>
+              <span class="tiny">${detail}</span>
+            </div>
+            <div class="entity-actions">
+              <span class="pill">${e.id === selectedId ? 'Selected' : 'Pick'}</span>
+            </div>`;
+          el.addEventListener('click', () => { selectedId = e.id; syncEditor(); queueRender(); });
+          entityList.appendChild(el);
+        });
+      }
+
+      function syncEditor() {
+        const e = getEntity(selectedId);
+        selectedName.textContent = e ? `${e.type === 'flow' ? 'Uniform flow' : e.type === 'source' ? 'Source' : 'Sink'} ${entities.indexOf(e) + 1}` : 'None';
+        renderEntityList();
+        if (!e) {
+          selectedEditor.innerHTML = '<div class="muted">No source, sink, or uniform flow selected yet.</div>';
+          return;
+        }
+        if (e.type === 'flow') {
+          selectedEditor.innerHTML = `
+            <div class="grid2">
+              <label>X anchor
+                <input id="selX" type="range" min="0.03" max="0.97" step="0.005" value="${e.x}">
+              </label>
+              <label>Y anchor
+                <input id="selY" type="range" min="0.03" max="0.97" step="0.005" value="${e.y}">
+              </label>
+              <label>Strength
+                <input id="selS" type="range" min="0.2" max="3.2" step="0.05" value="${e.strength}">
+              </label>
+              <label>Angle (degrees)
+                <input id="selA" type="number" min="-180" max="180" step="1" value="${((e.angle || 0) * 180 / Math.PI).toFixed(0)}">
+              </label>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" id="duplicateSel">Duplicate</button>
+              <button class="btn btn-ghost" id="deleteSel">Delete</button>
+            </div>`;
+          document.getElementById('selX').addEventListener('input', ev => { e.x = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selY').addEventListener('input', ev => { e.y = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selS').addEventListener('input', ev => { e.strength = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selA').addEventListener('input', ev => { e.angle = Number(ev.target.value) * Math.PI / 180; queueRender(); renderEntityList(); });
+        } else {
+          selectedEditor.innerHTML = `
+            <div class="grid2">
+              <label>X position
+                <input id="selX" type="range" min="0.03" max="0.97" step="0.005" value="${e.x}">
+              </label>
+              <label>Y position
+                <input id="selY" type="range" min="0.03" max="0.97" step="0.005" value="${e.y}">
+              </label>
+              <label>Strength
+                <input id="selS" type="range" min="0.2" max="3.2" step="0.05" value="${e.strength}">
+              </label>
+              <label>Type
+                <select id="selType">
+                  <option value="source" ${e.type === 'source' ? 'selected' : ''}>Source</option>
+                  <option value="sink" ${e.type === 'sink' ? 'selected' : ''}>Sink</option>
+                </select>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" id="duplicateSel">Duplicate</button>
+              <button class="btn btn-ghost" id="deleteSel">Delete</button>
+            </div>`;
+          document.getElementById('selX').addEventListener('input', ev => { e.x = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selY').addEventListener('input', ev => { e.y = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selS').addEventListener('input', ev => { e.strength = Number(ev.target.value); queueRender(); renderEntityList(); });
+          document.getElementById('selType').addEventListener('change', ev => { e.type = ev.target.value; queueRender(); renderEntityList(); });
+        }
+        document.getElementById('duplicateSel').addEventListener('click', () => {
+          const dup = { ...e, id: crypto.randomUUID(), x: clamp((e.x ?? 0.5) + 0.06, 0.04, 0.96), y: clamp((e.y ?? 0.5) + 0.04, 0.04, 0.96) };
+          entities.push(dup); selectedId = dup.id; syncEditor(); queueRender();
+        });
+        document.getElementById('deleteSel').addEventListener('click', () => {
+          entities = entities.filter(item => item.id !== e.id);
+          selectedId = entities[0]?.id || null; syncEditor(); queueRender();
+        });
+      }
+
+      function addEntity(type, x = 0.5, y = 0.5) {
+        const entity = newEntity(type === 'flow' ? { type, x, y, strength: 1.0, angle: 0 } : { type, x, y, strength: 1.0 });
+        entities.push(entity);
+        selectedId = entity.id;
+        activePresetId = null;
+        renderPresetList();
+        syncEditor();
+        queueRender();
+      }
+
+      function entityHit(pos) {
+        const w = canvas.width / dpr, h = canvas.height / dpr;
+        const hitRadius = 0.04 * Math.min(w, h);
+        for (let i = entities.length - 1; i >= 0; i--) {
+          const p = worldToCanvas(entities[i]);
+          const q = worldToCanvas(pos);
+          if (Math.hypot(p.x - q.x, p.y - q.y) <= hitRadius) return entities[i];
+        }
+        return null;
+      }
+
+      function render() { drawField(); }
+
+      addSourceBtn.addEventListener('click', () => addEntity('source', 0.28 + Math.random() * 0.12, 0.28 + Math.random() * 0.44));
+      addSinkBtn.addEventListener('click', () => addEntity('sink', 0.6 + Math.random() * 0.12, 0.28 + Math.random() * 0.44));
+      addFlowBtn.addEventListener('click', () => addEntity('flow', 0.2, 0.5));
+      clearAllBtn.addEventListener('click', () => { entities = []; selectedId = null; activePresetId = null; renderPresetList(); syncEditor(); queueRender(); });
+      [seedDensityInput, stepSizeInput, maxStepsInput, strengthScaleInput].forEach(el => el.addEventListener('input', queueRender));
+      modeStreamBtn.addEventListener('click', () => { viewMode = 'stream'; modeStreamBtn.classList.add('active'); modeVectorsBtn.classList.remove('active'); queueRender(); });
+      modeVectorsBtn.addEventListener('click', () => { viewMode = 'vector'; modeVectorsBtn.classList.add('active'); modeStreamBtn.classList.remove('active'); queueRender(); });
+      showMarkersBtn.addEventListener('click', () => { showMarkers = !showMarkers; showMarkersBtn.classList.toggle('active', showMarkers); queueRender(); });
+
+      canvas.addEventListener('pointerdown', evt => {
+        const pos = getPointer(evt);
+        const hit = entityHit(pos);
+        if (hit) {
+          draggingId = hit.id;
+          selectedId = hit.id;
+          canvas.setPointerCapture(evt.pointerId);
+          syncEditor();
+          queueRender();
+        }
+      });
+      canvas.addEventListener('pointermove', evt => {
+        const pos = getPointer(evt);
+        cursorReadout.textContent = `(${fmt(pos.x)}, ${fmt(pos.y)})`;
+        if (!draggingId) return;
+        const e = getEntity(draggingId);
+        if (!e) return;
+        e.x = clamp(pos.x, 0.03, 0.97);
+        e.y = clamp(pos.y, 0.03, 0.97);
+        queueRender();
+        renderEntityList();
+        const sx = document.getElementById('selX');
+        const sy = document.getElementById('selY');
+        if (sx) sx.value = e.x;
+        if (sy) sy.value = e.y;
+      });
+      const stopDrag = () => { draggingId = null; };
+      canvas.addEventListener('pointerup', stopDrag);
+      canvas.addEventListener('pointercancel', stopDrag);
+      canvas.addEventListener('dblclick', evt => {
+        const pos = getPointer(evt);
+        addEntity(evt.altKey ? 'sink' : 'source', pos.x, pos.y);
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+      new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+
+      renderPresetList();
+      loadPreset(activePresetId);
+      resizeCanvas();
+    })();
+  </script>
+</body>
+</html>
