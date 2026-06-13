@@ -16,7 +16,7 @@
 body{font-family:var(--font);background:var(--bg);color:var(--txt);height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 h1{font-size:1.05rem;font-weight:700;letter-spacing:-0.01em}
 .sub{font-size:0.7rem;color:var(--muted);margin-top:1px}
-.shell{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:0;height:calc(100dvh)}
+.shell{display:grid;grid-template-columns:260px 1fr;flex:1;min-height:0;overflow:hidden;}
 .sidebar{background:var(--surf);border-right:1px solid var(--divider);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:0;height:100%;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .sidebar::-webkit-scrollbar{width:5px}.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
 .topbar{padding:0.7rem 0.9rem;border-bottom:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
@@ -42,16 +42,16 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
 .chip-lbl{font-size:0.67rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--faint)}
 .chip-v{font-size:0.88rem;font-weight:700;margin-top:2px}
 .chip-v.green{color:var(--green)}.chip-v.red{color:var(--red)}.chip-v.blue{color:var(--primary)}
-.main{display:flex;flex-direction:column;min-width:0;height:100%;overflow:hidden}
+.main{display:flex;flex-direction:column;min-width:0;height:100%;overflow:hidden;min-height:0;}
 .toolbar{background:var(--surf);border-bottom:1px solid var(--divider);padding:0.4rem 0.8rem;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;flex-shrink:0}
 .coord{font-size:0.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.plane-row{display:flex;flex:0 0 55%;min-height:0;overflow:hidden;border-bottom:1px solid var(--divider)}
+.plane-row{display:flex;flex:0 0 46%;min-height:0;overflow:hidden;border-bottom:1px solid var(--divider)}
 .plane-wrap{flex:1;min-width:0;position:relative;background:#f4f2ec;overflow:hidden}
 .plane-wrap+.plane-wrap{border-left:1px solid var(--divider)}
 .plane-label{position:absolute;top:5px;left:8px;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);background:var(--surf);padding:1px 6px;border-radius:99px;border:1px solid var(--border);z-index:2;pointer-events:none}
 #cvsZ{width:100%;height:100%;display:block;cursor:crosshair}
 #cvsZeta{width:100%;height:100%;display:block;cursor:crosshair}
-.pbar{flex:0 0 120px;background:var(--surf);border-top:1px solid var(--divider);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.pbar{flex:0 0 150px;background:var(--surf);border-top:1px solid var(--divider);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 .pbar-hd{padding:0.25rem 0.8rem;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border-bottom:1px solid var(--divider);display:flex;gap:1rem;align-items:center;flex-shrink:0}
 .pbar-hd span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)}
 #pCvs{flex:1;width:100%;display:block;min-height:0}
@@ -173,7 +173,6 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;bac
 </div>
 
 <script>
-// ─── Complex helpers ─────────────────────────────────────────────────────
 const C=(r,i=0)=>({r,i});
 const cadd=(a,b)=>C(a.r+b.r,a.i+b.i);
 const csub=(a,b)=>C(a.r-b.r,a.i-b.i);
@@ -184,23 +183,20 @@ const carg=(a)=>Math.atan2(a.i,a.r);
 const cexp=(a)=>C(Math.exp(a.r)*Math.cos(a.i),Math.exp(a.r)*Math.sin(a.i));
 const csqrt=(a)=>{const m=Math.sqrt(cabs(a)),ang=carg(a)/2;return C(m*Math.cos(ang),m*Math.sin(ang))};
 
-// ─── Parameters ──────────────────────────────────────────────────────────
 let P={eps:0.10,eta0:0.05,alpha:5*Math.PI/180,Uinf:1.0};
 let nL=30;
 let flags={showAirfoil:true,showStream:true,showArrows:true,showStag:true,showCp:true};
 let isDark=false;
 
-// ─── Geometry ─────────────────────────────────────────────────────────────
 function geo(){
-  const xi0=-P.eps, eta0=P.eta0;
+  const xi0=-P.eps,eta0=P.eta0;
   const R=Math.sqrt((1-xi0)*(1-xi0)+eta0*eta0);
   const cj=R-P.eps;
   const sinArg=Math.max(-1,Math.min(1,eta0/R));
   const Gamma=4*Math.PI*P.Uinf*R*Math.sin(P.alpha+Math.asin(sinArg));
-  return {xi0,eta0,R,cj,Gamma};
+  return{xi0,eta0,R,cj,Gamma};
 }
 
-// ─── dW/dζ ───────────────────────────────────────────────────────────────
 function dWdz(zeta,g){
   const zc=csub(zeta,C(g.xi0,g.eta0));
   const zc2=cmul(zc,zc);
@@ -210,10 +206,8 @@ function dWdz(zeta,g){
   return cadd(cadd(t1,t2),t3);
 }
 
-// ─── Velocity in ζ-plane ─────────────────────────────────────────────────
 function velZeta(zeta,g){const dw=dWdz(zeta,g);return{u:dw.r,v:-dw.i};}
 
-// ─── Inverse Joukowski ────────────────────────────────────────────────────
 function jInv(z,g){
   const c2=g.cj*g.cj;
   const disc=csqrt(csub(cmul(z,z),C(4*c2,0)));
@@ -222,54 +216,46 @@ function jInv(z,g){
   return cabs(csub(z1,C(g.xi0,g.eta0)))>=cabs(csub(z2,C(g.xi0,g.eta0)))?z1:z2;
 }
 
-// ─── Velocity in z-plane ──────────────────────────────────────────────────
 function velZ(wx,wy,g){
   const zeta=jInv(C(wx,wy),g);
-  if(cabs(csub(zeta,C(g.xi0,g.eta0)))<g.R*0.93) return null;
+  if(cabs(csub(zeta,C(g.xi0,g.eta0)))<g.R*0.93)return null;
   const dw=dWdz(zeta,g);
   const dzdz=csub(C(1,0),cdiv(C(g.cj*g.cj,0),cmul(zeta,zeta)));
   const vz=cdiv(dw,dzdz);
   return{u:vz.r,v:-vz.i};
 }
 
-// ─── Joukowski map ────────────────────────────────────────────────────────
 function jmap(zeta,g){return cadd(zeta,cdiv(C(g.cj*g.cj,0),zeta));}
 
-// ─── Stream function ψ ───────────────────────────────────────────────────
 function psi(zeta,g){
   const zc=csub(zeta,C(g.xi0,g.eta0));
   const r=cabs(zc)+1e-30;
   return P.Uinf*r*Math.sin(carg(zc)-P.alpha)*(1-g.R*g.R/(r*r))+g.Gamma/(2*Math.PI)*Math.log(r);
 }
 
-// ─── Stagnation angles ────────────────────────────────────────────────────
 function stagAngles(g){
   const sv=Math.max(-1,Math.min(1,g.Gamma/(4*Math.PI*P.Uinf*g.R)));
   const d=Math.asin(sv);
   return[Math.PI+P.alpha+d,P.alpha-d];
 }
 
-// ─── Cp colour ─────────────────────────────────────────────────────────────
 function cpCol(cp){const t=Math.max(0,Math.min(1,(cp+3)/4.5));return`hsl(${220-t*220},80%,50%)`;}
 function cssV(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 
-// ─── Canvas references ────────────────────────────────────────────────────
-const cvsZ    = document.getElementById('cvsZ');
-const ctxZ    = cvsZ.getContext('2d');
-const cvsZeta = document.getElementById('cvsZeta');
-const ctxZeta = cvsZeta.getContext('2d');
-const pCvs    = document.getElementById('pCvs');
-const pCtx    = pCvs.getContext('2d');
+const cvsZ=document.getElementById('cvsZ');
+const ctxZ=cvsZ.getContext('2d');
+const cvsZeta=document.getElementById('cvsZeta');
+const ctxZeta=cvsZeta.getContext('2d');
+const pCvs=document.getElementById('pCvs');
+const pCtx=pCvs.getContext('2d');
 let dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-
-let VPz   ={x0:-3.5,x1:3.5,y0:-2.5,y1:2.5};
-let VPzeta={x0:-2.0,x1:2.0,y0:-1.5,y1:1.5};
+let VPz={x0:-3.5,x1:3.5,y0:-2.5,y1:2.5};
+let VPzeta={x0:-2.8,x1:2.8,y0:-2.0,y1:2.0};
 
 function w2p(vp,wx,wy,w,h){return{x:(wx-vp.x0)/(vp.x1-vp.x0)*w,y:(1-(wy-vp.y0)/(vp.y1-vp.y0))*h};}
 function p2w(vp,px,py,w,h){return{x:px/w*(vp.x1-vp.x0)+vp.x0,y:(1-py/h)*(vp.y1-vp.y0)+vp.y0};}
 function insideVP(vp,wx,wy){return wx>vp.x0-0.1&&wx<vp.x1+0.1&&wy>vp.y0-0.1&&wy<vp.y1+0.1;}
 
-// ─── Grid & axes ──────────────────────────────────────────────────────────
 function drawBg(ctx,vp,w,h){
   ctx.fillStyle=cssV('--bg');ctx.fillRect(0,0,w,h);
   ctx.save();
@@ -285,7 +271,6 @@ function drawBg(ctx,vp,w,h){
   ctx.restore();
 }
 
-// ─── Cp flood ─────────────────────────────────────────────────────────────
 function drawCpFlood(ctx,vp,w,h,g,isZ){
   const sz=Math.max(4,Math.floor(w/65));
   ctx.save();
@@ -302,7 +287,6 @@ function drawCpFlood(ctx,vp,w,h,g,isZ){
   ctx.globalAlpha=1;ctx.restore();
 }
 
-// ─── Streamlines ─────────────────────────────────────────────────────────
 function drawStreamlines(ctx,vp,w,h,g,isZ){
   ctx.save();
   ctx.strokeStyle=isDark?'#60a5fa':'#1d6fd4';
@@ -333,7 +317,6 @@ function drawStreamlines(ctx,vp,w,h,g,isZ){
   ctx.restore();
 }
 
-// ─── Velocity arrows ──────────────────────────────────────────────────────
 function drawArrows(ctx,vp,w,h,g,isZ){
   ctx.save();ctx.globalAlpha=0.55;
   const col=cssV('--txt');ctx.strokeStyle=col;ctx.fillStyle=col;
@@ -357,7 +340,6 @@ function drawArrows(ctx,vp,w,h,g,isZ){
   ctx.globalAlpha=1;ctx.restore();
 }
 
-// ─── Body outline ─────────────────────────────────────────────────────────
 function drawBody(ctx,vp,w,h,g,isZ){
   ctx.save();ctx.beginPath();
   const N=512;
@@ -374,9 +356,8 @@ function drawBody(ctx,vp,w,h,g,isZ){
   ctx.restore();
 }
 
-// ─── Stagnation points ────────────────────────────────────────────────────
 function drawStag(ctx,vp,w,h,g,isZ){
-  const [th1,th2]=stagAngles(g);
+  const[th1,th2]=stagAngles(g);
   [[th1,'#22c55e'],[th2,'#ef4444']].forEach(([th,col])=>{
     let px,py;
     if(isZ){const zeta=C(g.xi0+g.R*Math.cos(th),g.eta0+g.R*Math.sin(th));const z=jmap(zeta,g);const p=w2p(vp,z.r,z.i,w,h);px=p.x;py=p.y;}
@@ -386,7 +367,6 @@ function drawStag(ctx,vp,w,h,g,isZ){
   });
 }
 
-// ─── Pressure plot ────────────────────────────────────────────────────────
 function drawPressure(g){
   const pw=pCvs.width/dpr,ph=pCvs.height/dpr;
   pCtx.clearRect(0,0,pw,ph);
@@ -420,7 +400,6 @@ function drawPressure(g){
   pCtx.restore();
 }
 
-// ─── Result chips ─────────────────────────────────────────────────────────
 function updateChips(g){
   let xmin=Infinity,xmax=-Infinity,ymax=-Infinity,ymin=Infinity;
   for(let i=0;i<=400;i++){const th=i/400*2*Math.PI;const zeta=C(g.xi0+g.R*Math.cos(th),g.eta0+g.R*Math.sin(th));const z=jmap(zeta,g);xmin=Math.min(xmin,z.r);xmax=Math.max(xmax,z.r);ymax=Math.max(ymax,z.i);ymin=Math.min(ymin,z.i);}
@@ -433,7 +412,6 @@ function updateChips(g){
   document.getElementById('r-tc').textContent=((ymax-ymin)/chord*100).toFixed(1)+'%';
 }
 
-// ─── Main draw call ───────────────────────────────────────────────────────
 function draw(){
   const g=geo();
   const wz=cvsZ.width/dpr,hz=cvsZ.height/dpr;
@@ -454,7 +432,6 @@ function draw(){
   updateChips(g);
 }
 
-// ─── Resize ───────────────────────────────────────────────────────────────
 function resizeCvs(cvs,ctx){
   dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
   const r=cvs.getBoundingClientRect();
@@ -467,13 +444,12 @@ function resizeAll(){
   const zeta=resizeCvs(cvsZeta,ctxZeta);
   resizeCvs(pCvs,pCtx);
   const az=z.h/z.w;VPz={x0:-3.5,x1:3.5,y0:-3.5*az,y1:3.5*az};
-  const azeta=zeta.h/zeta.w;VPzeta={x0:-2.0,x1:2.0,y0:-2.0*azeta,y1:2.0*azeta};
+  const azeta=zeta.h/zeta.w;VPzeta={x0:-2.8,x1:2.8,y0:-2.8*azeta,y1:2.8*azeta};
   qRender();
 }
 let _raf=null;
 function qRender(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=null;draw();});}
 
-// ─── Sliders ──────────────────────────────────────────────────────────────
 function bindSlider(id,key,dispId,fmt){
   document.getElementById(id).addEventListener('input',e=>{
     P[key]=Number(e.target.value);document.getElementById(dispId).textContent=fmt(P[key]);qRender();
@@ -490,14 +466,12 @@ document.getElementById('s-nl').addEventListener('input',e=>{
   nL=Number(e.target.value);document.getElementById('v-nl').textContent=nL;qRender();
 });
 
-// ─── Toggle flags ─────────────────────────────────────────────────────────
 document.querySelectorAll('[data-f]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const f=btn.dataset.f;flags[f]=!flags[f];btn.classList.toggle('on',flags[f]);qRender();
   });
 });
 
-// ─── Presets ─────────────────────────────────────────────────────────────
 const PRESETS=[
   {key:'sym',   label:'Symmetric', sub:'No camber',    eps:0.12,eta0:0,    aoa:5},
   {key:'cam',   label:'Cambered',  sub:'Classic lift', eps:0.10,eta0:0.08, aoa:6},
@@ -528,12 +502,10 @@ function buildPresets(){
 }
 buildPresets();
 
-// ─── Theme toggle ─────────────────────────────────────────────────────────
 document.getElementById('themeBtn').onclick=()=>{
   isDark=!isDark;document.documentElement.toggleAttribute('data-dark',isDark);qRender();
 };
 
-// ─── Hover coordinates ────────────────────────────────────────────────────
 cvsZ.addEventListener('mousemove',e=>{
   const r=cvsZ.getBoundingClientRect();
   const wp=p2w(VPz,(e.clientX-r.left)/r.width*(cvsZ.width/dpr),(e.clientY-r.top)/r.height*(cvsZ.height/dpr),cvsZ.width/dpr,cvsZ.height/dpr);
@@ -545,7 +517,6 @@ cvsZeta.addEventListener('mousemove',e=>{
   document.getElementById('coordLbl').textContent=`ζ=(${wp.x.toFixed(3)}, ${wp.y.toFixed(3)})`;
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────
 window.addEventListener('resize',resizeAll);
 new ResizeObserver(resizeAll).observe(document.querySelector('.plane-row'));
 new ResizeObserver(()=>{resizeCvs(pCvs,pCtx);qRender();}).observe(document.querySelector('.pbar'));
