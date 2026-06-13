@@ -371,28 +371,47 @@ function drawPressure(g){
   const pw=pCvs.width/dpr,ph=pCvs.height/dpr;
   pCtx.clearRect(0,0,pw,ph);
   pCtx.fillStyle=cssV('--surf');pCtx.fillRect(0,0,pw,ph);
+  
   const N=300,upper=[],lower=[];
+  let pMin = Infinity, pMax = -Infinity; // Track dynamic boundaries
+  
   for(let i=0;i<N;i++){
     const th=i/N*2*Math.PI;
     const zeta=C(g.xi0+g.R*Math.cos(th),g.eta0+g.R*Math.sin(th));
     const z=jmap(zeta,g);
     const vel=velZeta(zeta,g);
     const cp=1-(vel.u*vel.u+vel.v*vel.v)/(P.Uinf*P.Uinf);
+    
+    // Update min and max Cp
+    pMin = Math.min(pMin, cp);
+    pMax = Math.max(pMax, cp);
+    
     const xn=(z.r-(-2))/4;
     if(g.eta0+g.R*Math.sin(th)>=g.eta0)upper.push({x:xn,cp});else lower.push({x:xn,cp});
   }
   upper.sort((a,b)=>a.x-b.x);lower.sort((a,b)=>a.x-b.x);
+  
+  // Calculate padded drawing boundaries dynamically
+  const cpRange = Math.max(1.0, pMax - pMin);
+  const cpMin = pMin - cpRange * 0.1;
+  const cpMax = pMax + cpRange * 0.1;
+  
   const xp=28,yp=8,plotW=pw-xp*2,plotH=ph-yp*2;
-  const cpMin=-4,cpMax=1.5;
   const toX=x=>xp+Math.max(0,Math.min(1,x))*plotW;
   const toY=cp=>yp+(1-(cp-cpMin)/(cpMax-cpMin))*plotH;
+  
   pCtx.save();
   pCtx.strokeStyle=isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)';
   pCtx.lineWidth=0.8;pCtx.setLineDash([4,4]);
   pCtx.beginPath();pCtx.moveTo(xp,toY(0));pCtx.lineTo(pw-xp,toY(0));pCtx.stroke();
   pCtx.setLineDash([]);
+  
+  // Update labels to reflect dynamic bounds
   pCtx.fillStyle=cssV('--faint');pCtx.font='9px sans-serif';pCtx.textAlign='right';
-  pCtx.fillText('Cp=0',xp-2,toY(0)+3);pCtx.fillText(cpMin,xp-2,toY(cpMin)+3);
+  pCtx.fillText('Cp=0',xp-2,toY(0)+3);
+  pCtx.fillText(cpMin.toFixed(1),xp-2,toY(cpMin)+3);
+  pCtx.fillText(cpMax.toFixed(1),xp-2,toY(cpMax)+3);
+  
   pCtx.strokeStyle='#3b82f6';pCtx.lineWidth=1.6;
   pCtx.beginPath();upper.forEach((pt,i)=>{i===0?pCtx.moveTo(toX(pt.x),toY(pt.cp)):pCtx.lineTo(toX(pt.x),toY(pt.cp))});pCtx.stroke();
   pCtx.strokeStyle='#f97316';pCtx.lineWidth=1.6;
@@ -439,14 +458,33 @@ function resizeCvs(cvs,ctx){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   return{w:r.width,h:r.height};
 }
+
 function resizeAll(){
   const z=resizeCvs(cvsZ,ctxZ);
   const zeta=resizeCvs(cvsZeta,ctxZeta);
   resizeCvs(pCvs,pCtx);
-  const az=z.h/z.w;VPz={x0:-3.5,x1:3.5,y0:-3.5*az,y1:3.5*az};
-  const azeta=zeta.h/zeta.w;VPzeta={x0:-2.8,x1:2.8,y0:-2.8*azeta,y1:2.8*azeta};
+  
+  // Z-plane Viewport Protection (Airfoil)
+  const az = z.h / z.w;
+  const spanZx = 3.5, spanZy = 2.5; 
+  if(az < spanZy / spanZx) { // Wide landscape layout
+    VPz = { x0: -spanZy / az, x1: spanZy / az, y0: -spanZy, y1: spanZy };
+  } else { // Taller portrait layout
+    VPz = { x0: -spanZx, x1: spanZx, y0: -spanZx * az, y1: spanZx * az };
+  }
+  
+  // Zeta-plane Viewport Protection (Cylinder)
+  const azeta = zeta.h / zeta.w;
+  const spanZetaX = 2.8, spanZetaY = 2.0;
+  if(azeta < spanZetaY / spanZetaX) { // Wide landscape layout
+    VPzeta = { x0: -spanZetaY / azeta, x1: spanZetaY / azeta, y0: -spanZetaY, y1: spanZetaY };
+  } else { // Taller portrait layout
+    VPzeta = { x0: -spanZetaX, x1: spanZetaX, y0: -spanZetaX * azeta, y1: spanZetaX * azeta };
+  }
+  
   qRender();
 }
+
 let _raf=null;
 function qRender(){if(_raf)return;_raf=requestAnimationFrame(()=>{_raf=null;draw();});}
 
@@ -473,8 +511,8 @@ document.querySelectorAll('[data-f]').forEach(btn=>{
 });
 
 const PRESETS=[
-  {key:'sym',   label:'Symmetric', sub:'No camber',    eps:0.12,eta0:0,    aoa:5},
-  {key:'cam',   label:'Cambered',  sub:'Classic lift', eps:0.10,eta0:0.08, aoa:6},
+  {key:'sym',  label:'Symmetric', sub:'No camber',    eps:0.12,eta0:0,    aoa:5},
+  {key:'cam',  label:'Cambered',  sub:'Classic lift', eps:0.10,eta0:0.08, aoa:6},
   {key:'thick', label:'Thick',     sub:'High t/c',     eps:0.22,eta0:0.05, aoa:3},
   {key:'thin',  label:'Thin',      sub:'Sharp edge',   eps:0.04,eta0:0.03, aoa:8},
   {key:'hiAoA', label:'High AoA',  sub:'Near stall',   eps:0.10,eta0:0.06, aoa:18},
